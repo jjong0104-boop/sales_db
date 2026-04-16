@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>방문일지 — 통신본부</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/layout.css">
+</head>
+<body>
+<div class="app-layout">
+  <header class="topbar" id="topbar"></header>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="Layout.closeSidebar()"></div>
+  <div class="app-body">
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">메뉴</div>
+        <a href="dashboard.html" class="nav-item" data-page="dashboard">
+          <span class="nav-icon">📝</span>방문일지<span class="nav-badge" id="badge-logs">-</span>
+        </a>
+        <a href="clients.html" class="nav-item" data-page="clients">
+          <span class="nav-icon">🏢</span>거래처 관리<span class="nav-badge" id="badge-clients">-</span>
+        </a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">빠른 작성</div>
+        <div class="nav-item" onclick="openLogModal();Layout.closeSidebar()">
+          <span class="nav-icon">✏️</span>방문일지 작성
+        </div>
+        <a href="clients.html" class="nav-item">
+          <span class="nav-icon">➕</span>거래처 등록
+        </a>
+      </div>
+    </nav>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>방문일지</h1>
+          <p id="page-sub">전체 방문 기록</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-outline btn-sm" onclick="exportCSV()">↓ 내보내기</button>
+          <button class="btn btn-primary" onclick="openLogModal()">+ 방문일지 작성</button>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">전체 방문일지</div><div class="stat-value sv-blue" id="st-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">검색 결과</div><div class="stat-value sv-green" id="st-filtered">—</div></div>
+        <div class="stat-card"><div class="stat-label">계약 완료</div><div class="stat-value sv-dark" id="st-done">—</div></div>
+        <div class="stat-card"><div class="stat-label">피드백 대기</div><div class="stat-value sv-amber" id="st-fb">—</div></div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-ico"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4.5"/><line x1="9.5" y1="9.5" x2="13" y2="13"/></svg></span>
+          <input type="text" id="search-input" placeholder="거래처명, 담당자, 사업구분 검색..." oninput="applyFilters()">
+        </div>
+        <select class="filter-select" id="filter-rep" onchange="applyFilters()"><option value="">담당자 전체</option></select>
+        <select class="filter-select" id="filter-status" onchange="applyFilters()">
+          <option value="">상태 전체</option>
+          <option value="계약완료">계약완료</option>
+          <option value="협의중">협의중</option>
+          <option value="진행중">진행중</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="resetFilters()">초기화</button>
+      </div>
+      <div class="result-hint" id="result-hint"></div>
+
+      <!-- PC: 테이블 -->
+      <div class="table-wrap">
+        <div class="tbl-scroll">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th style="width:32px"><input type="checkbox" class="cb" id="cb-all" onchange="toggleAll(this)"></th>
+                <th class="sortable" onclick="sortBy('visit_date')">방문일<span class="sort-arrow none" id="sa-visit_date"></span></th>
+                <th class="sortable" onclick="sortBy('rep_name')">담당자<span class="sort-arrow none" id="sa-rep_name"></span></th>
+                <th class="sortable" onclick="sortBy('client_name')">거래처명<span class="sort-arrow none" id="sa-client_name"></span></th>
+                <th>거래처 담당자</th>
+                <th class="sortable" onclick="sortBy('status')">상태<span class="sort-arrow none" id="sa-status"></span></th>
+                <th>미팅차수</th>
+                <th>추후일정</th>
+                <th class="sortable" onclick="sortBy('biz_type')">사업구분<span class="sort-arrow none" id="sa-biz_type"></span></th>
+                <th>피드백</th>
+                <th style="width:120px">상세/수정</th>
+              </tr>
+            </thead>
+            <tbody id="log-tbody"><tr><td colspan="11" class="empty-state"><span class="spinner"></span></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 모바일: 카드 리스트 -->
+      <div class="card-list" id="card-list"></div>
+    </main>
+  </div>
+
+  <!-- 모바일 하단 탭바 -->
+  <nav class="bottom-tab">
+    <div class="bottom-tab-inner">
+      <a href="dashboard.html" class="tab-item active">
+        <svg viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="6" height="6" rx="1.5" fill="currentColor" opacity=".7"/><rect x="10" y="2" width="6" height="6" rx="1.5" fill="currentColor" opacity=".7"/><rect x="2" y="10" width="6" height="6" rx="1.5" fill="currentColor" opacity=".7"/><rect x="10" y="10" width="6" height="6" rx="1.5" fill="currentColor" opacity=".7"/></svg>
+        방문일지
+      </a>
+      <div class="tab-fab" onclick="openLogModal()">
+        <div class="tab-fab-btn"><svg viewBox="0 0 18 18"><path d="M9 3v12M3 9h12" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <span style="font-size:10px;color:var(--green)">작성</span>
+      </div>
+      <a href="clients.html" class="tab-item">
+        <svg viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M6 8h6M6 11h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+        거래처
+      </a>
+    </div>
+  </nav>
+</div>
+
+<div class="loading-overlay" id="loading-overlay"><div class="spinner" style="width:32px;height:32px;border-width:3px"></div></div>
+
+<!-- ══ 방문일지 작성/수정 모달 ══ -->
+<div class="modal-bg" id="modal-log">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="log-modal-title">방문일지 작성</div>
+      <button class="modal-close" onclick="Utils.closeModal('modal-log')">✕</button>
+    </div>
+    <div class="sec-divider">기본 정보</div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">거래처 *</label><select class="form-input" id="f-client"></select></div>
+      <div class="form-group"><label class="form-label">방문일자 *</label><input type="date" class="form-input" id="f-date"></div>
+      <div class="form-group"><label class="form-label">담당 영업사원</label><select class="form-input" id="f-rep"><option>이원태</option><option>권현우</option><option>나경덕</option><option>최용준</option></select></div>
+      <div class="form-group"><label class="form-label">진행 상태</label><select class="form-input" id="f-status"><option>협의중</option><option>계약완료</option><option>진행중</option></select></div>
+      <div class="form-group"><label class="form-label">추후 일정</label><input type="date" class="form-input" id="f-next"></div>
+      <div class="form-group"><label class="form-label">사업구분</label><input type="text" class="form-input" id="f-biz" placeholder="예: 기업070/오피스넷"></div>
+    </div>
+    <div class="sec-divider">미팅 내용</div>
+    <div id="rounds-container"></div>
+    <button class="btn btn-outline btn-sm" onclick="addRound()" style="margin-top:4px">+ 미팅 추가</button>
+    <div class="sec-divider">팀장 피드백</div>
+    <div class="fb-box" style="padding:12px">
+      <div class="fb-label">💬 팀장 피드백</div>
+      <textarea class="form-input" id="f-feedback" rows="3" placeholder="팀장 피드백 내용..." style="background:transparent;border-color:#F0997B;margin-top:6px"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Utils.closeModal('modal-log')">취소</button>
+      <button class="btn btn-primary" id="log-save-btn" onclick="saveLog()">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 상세보기 모달 ══ -->
+<div class="modal-bg" id="modal-detail">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="detail-title">방문일지 상세</div>
+      <button class="modal-close" onclick="Utils.closeModal('modal-detail')">✕</button>
+    </div>
+    <div id="detail-body"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../js/supabase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+if (!Auth.init() || !Auth.requireLogin()) {}
+Layout.renderTopbar();
+Layout.activateNav('dashboard');
+
+let allLogs=[], filteredLogs=[], clientsList=[];
+let sortKey='visit_date', sortAsc=false, editingLogId=null, roundCount=0;
+
+async function init() {
+  try {
+    const repId = Auth.isManager() ? null : Auth.currentUser.id;
+    document.getElementById('page-sub').textContent = Auth.isManager() ? '전체 방문 기록' : `${Auth.currentUser.name} 담당 기록`;
+    if (!Auth.isManager()) {
+      const sel = document.getElementById('filter-rep');
+      const opt = document.createElement('option');
+      opt.value = Auth.currentUser.name; opt.textContent = Auth.currentUser.name; opt.selected = true;
+      sel.appendChild(opt); sel.disabled = true;
+    }
+    const [logs, clients, users] = await Promise.all([API.getLogs(repId), API.getClients(repId), API.getUsers()]);
+    allLogs = logs; clientsList = clients;
+    if (Auth.isManager()) {
+      const reps = [...new Set(logs.map(l=>l.rep_name).filter(Boolean))];
+      const sel = document.getElementById('filter-rep');
+      reps.forEach(r => { const o=document.createElement('option'); o.value=r; o.textContent=r; sel.appendChild(o); });
+    }
+    document.getElementById('badge-logs').textContent = logs.length;
+    document.getElementById('badge-clients').textContent = clients.length;
+    applyFilters(); populateClientSelect();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('log-tbody').innerHTML = `<tr><td colspan="11" class="empty-state">⚠️ 데이터를 불러올 수 없습니다.<br><small>js/supabase-config.js의 URL과 KEY를 확인해주세요.</small></td></tr>`;
+    document.getElementById('card-list').innerHTML = `<div class="empty-state">⚠️ 데이터를 불러올 수 없습니다.</div>`;
+  }
+}
+
+function applyFilters() {
+  const search=(document.getElementById('search-input').value||'').toLowerCase();
+  const rep=document.getElementById('filter-rep').value;
+  const status=document.getElementById('filter-status').value;
+  filteredLogs = allLogs.filter(l => {
+    if (rep && l.rep_name !== rep) return false;
+    if (status && l.status !== status) return false;
+    if (search) {
+      const hay = [l.client_name,l.rep_name,l.biz_type,...(l.meeting_rounds||[]).map(r=>r.content)].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+  filteredLogs.sort((a,b) => {
+    const av=a[sortKey]||'', bv=b[sortKey]||'';
+    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  updateStats(); renderTable(); renderCards();
+}
+
+function resetFilters() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('filter-status').value = '';
+  if (Auth.isManager()) document.getElementById('filter-rep').value = '';
+  applyFilters();
+}
+
+function sortBy(key) {
+  if (sortKey===key) sortAsc=!sortAsc; else { sortKey=key; sortAsc=false; }
+  document.querySelectorAll('.sort-arrow').forEach(el => el.className='sort-arrow none');
+  const sa = document.getElementById('sa-'+key);
+  if (sa) sa.className = 'sort-arrow '+(sortAsc?'asc':'desc');
+  applyFilters();
+}
+
+function updateStats() {
+  document.getElementById('st-total').textContent    = allLogs.length;
+  document.getElementById('st-filtered').textContent = filteredLogs.length;
+  document.getElementById('st-done').textContent     = filteredLogs.filter(l=>l.status==='계약완료').length;
+  document.getElementById('st-fb').textContent       = filteredLogs.filter(l=>l.feedback&&l.feedback.trim()).length;
+  document.getElementById('result-hint').textContent = `${filteredLogs.length}건 표시`;
+}
+
+/* ── PC 테이블 렌더링 ── */
+function renderTable() {
+  const tbody = document.getElementById('log-tbody');
+  if (!filteredLogs.length) { tbody.innerHTML=`<tr><td colspan="11" class="empty-state">조건에 맞는 방문일지가 없습니다</td></tr>`; return; }
+  tbody.innerHTML = filteredLogs.map(l => {
+    const c = clientsList.find(x=>x.id===l.client_id);
+    const hasFb = l.feedback && l.feedback.trim();
+    return `<tr>
+      <td><input type="checkbox" class="cb" value="${l.id}"></td>
+      <td class="td-muted td-nowrap">${Utils.fmtDate(l.visit_date)}</td>
+      <td class="td-nowrap">${Utils.repChip(l.rep_name)}</td>
+      <td class="td-bold">${l.client_name}</td>
+      <td class="td-muted">${c?.contact||'-'}</td>
+      <td>${Utils.statusChip(l.status)}</td>
+      <td><span class="round-badge">${(l.meeting_rounds||[]).length}차</span></td>
+      <td class="td-muted td-nowrap">${Utils.fmtDate(l.next_date)}</td>
+      <td class="td-muted td-trunc" title="${l.biz_type||''}">${l.biz_type||'-'}</td>
+      <td>${hasFb?`<span class="feedback-dot" title="${l.feedback}"></span>`:'-'}</td>
+      <td><div class="row-actions">
+        <button class="row-btn row-btn-view" onclick="showDetail('${l.id}')">상세보기</button>
+        <button class="row-btn row-btn-edit" onclick="openEditModal('${l.id}')">수정</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── 모바일 카드 렌더링 ── */
+function renderCards() {
+  const container = document.getElementById('card-list');
+  if (!filteredLogs.length) { container.innerHTML=`<div class="empty-state">조건에 맞는 방문일지가 없습니다</div>`; return; }
+  container.innerHTML = filteredLogs.map(l => {
+    const preview = (l.meeting_rounds||[]).length ? l.meeting_rounds[l.meeting_rounds.length-1].content.split('\n')[0] : '';
+    const hasFb = l.feedback && l.feedback.trim();
+    const repColors = {'이원태':'background:#E1F5EE;color:#085041','권현우':'background:#E6F1FB;color:#0C447C','나경덕':'background:#FAEEDA;color:#633806','최용준':'background:#FAECE7;color:#712B13'};
+    return `<div class="log-card" onclick="showDetail('${l.id}')">
+      <div class="lc-top"><div class="lc-company">${l.client_name}</div><div class="lc-date">${Utils.fmtDate(l.visit_date)}</div></div>
+      <div class="lc-meta">
+        ${Utils.statusChip(l.status)}
+        ${l.biz_type?`<span class="chip chip-gray">${l.biz_type}</span>`:''}
+        <span class="round-badge">${(l.meeting_rounds||[]).length}차</span>
+        ${hasFb?'<span class="feedback-dot"></span>':''}
+      </div>
+      <div class="lc-preview">${preview}</div>
+      <div class="lc-footer">
+        <div class="lc-rep">
+          <div class="rep-av" style="${repColors[l.rep_name]||''}">${(l.rep_name||'').slice(0,2)}</div>
+          ${l.rep_name}
+        </div>
+        <button class="lc-detail-btn" onclick="event.stopPropagation();showDetail('${l.id}')">상세보기 →</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleAll(cb) { document.querySelectorAll('#log-tbody .cb').forEach(c=>c.checked=cb.checked); }
+
+/* ── 상세 모달 ── */
+function showDetail(id) {
+  const l = allLogs.find(x=>x.id===id); if(!l) return;
+  document.getElementById('detail-title').textContent = `${l.client_name} — 방문일지`;
+  const rounds = l.meeting_rounds||[];
+  const hasFb = l.feedback && l.feedback.trim();
+  document.getElementById('detail-body').innerHTML = `
+    <div class="form-grid" style="margin-bottom:14px">
+      <div><div class="form-label">방문일</div>${Utils.fmtDate(l.visit_date)}</div>
+      <div><div class="form-label">상태</div>${Utils.statusChip(l.status)}</div>
+      <div><div class="form-label">담당 영업사원</div>${Utils.repChip(l.rep_name)}</div>
+      <div><div class="form-label">추후 일정</div>${Utils.fmtDate(l.next_date)}</div>
+      <div><div class="form-label">사업구분</div>${l.biz_type||'-'}</div>
+    </div>
+    <div class="sec-divider">미팅 내용</div>
+    <div class="timeline">${rounds.map((r,i)=>`
+      <div class="tl-item">
+        <div class="tl-dot">${i+1}차</div>
+        <div class="tl-body"><div class="tl-date">${Utils.fmtDate(r.round_date)}</div><div class="tl-text">${r.content||''}</div></div>
+      </div>`).join('')}</div>
+    <div class="sec-divider">팀장 피드백</div>
+    ${hasFb
+      ? `<div class="fb-box"><div class="fb-label">💬 팀장 피드백</div><div class="fb-text">${l.feedback}</div></div>`
+      : Auth.isManager()
+        ? `<div class="fb-box"><div class="fb-label">💬 피드백 작성</div>
+           <textarea class="form-input" id="inline-fb" rows="3" style="background:transparent;border-color:#F0997B;margin-top:6px">${l.feedback||''}</textarea>
+           <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveFeedback('${l.id}')">저장</button></div>`
+        : `<div style="color:var(--text3);font-size:13px;padding:8px 0">등록된 피드백이 없습니다.</div>`}
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn btn-outline btn-sm" onclick="Utils.closeModal('modal-detail');openEditModal('${l.id}')">✏️ 수정하기</button>
+    </div>`;
+  Utils.openModal('modal-detail');
+}
+
+async function saveFeedback(id) {
+  const fb = document.getElementById('inline-fb')?.value||'';
+  try {
+    Utils.setLoading(true);
+    await API.saveFeedback(id, fb);
+    const idx = allLogs.findIndex(l=>l.id===id);
+    if(idx>=0) allLogs[idx].feedback = fb;
+    Utils.setLoading(false); Utils.closeModal('modal-detail');
+    applyFilters(); Utils.toast('피드백이 저장되었습니다.');
+  } catch(e) { Utils.setLoading(false); Utils.toast('저장 실패: '+e.message); }
+}
+
+/* ── 작성/수정 모달 ── */
+function populateClientSelect() {
+  const myClients = Auth.isManager() ? clientsList : clientsList.filter(c=>c.rep_id===Auth.currentUser.id);
+  document.getElementById('f-client').innerHTML = myClients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+function openLogModal(prefillClientId=null) {
+  editingLogId=null; roundCount=0;
+  document.getElementById('log-modal-title').textContent='방문일지 작성';
+  document.getElementById('log-save-btn').textContent='저장하기';
+  document.getElementById('f-date').value=Utils.today();
+  document.getElementById('f-next').value='';
+  document.getElementById('f-biz').value='';
+  document.getElementById('f-feedback').value='';
+  document.getElementById('f-status').value='협의중';
+  if (!Auth.isManager()) document.getElementById('f-rep').value=Auth.currentUser.name;
+  if (prefillClientId) document.getElementById('f-client').value=prefillClientId;
+  document.getElementById('rounds-container').innerHTML='';
+  addRound();
+  Utils.openModal('modal-log');
+}
+
+function openEditModal(id) {
+  const l=allLogs.find(x=>x.id===id); if(!l) return;
+  editingLogId=id; roundCount=0;
+  document.getElementById('log-modal-title').textContent='방문일지 수정';
+  document.getElementById('log-save-btn').textContent='수정 저장';
+  document.getElementById('f-client').value=l.client_id;
+  document.getElementById('f-date').value=l.visit_date;
+  document.getElementById('f-next').value=l.next_date||'';
+  document.getElementById('f-biz').value=l.biz_type||'';
+  document.getElementById('f-feedback').value=l.feedback||'';
+  document.getElementById('f-status').value=l.status;
+  document.getElementById('f-rep').value=l.rep_name;
+  document.getElementById('rounds-container').innerHTML='';
+  (l.meeting_rounds||[{round_date:l.visit_date,content:''}]).forEach(r=>addRound(r.round_date,r.content));
+  Utils.openModal('modal-log');
+}
+
+function addRound(date='', content='') {
+  const i=roundCount++;
+  const el=document.createElement('div'); el.className='round-block'; el.id=`rd-${i}`;
+  el.innerHTML=`<div class="round-header">
+    <span class="round-label">${roundCount}차 미팅</span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <input type="date" class="form-input" id="rd-date-${i}" value="${date}" style="width:140px;padding:5px 8px;font-size:12px">
+      ${i>0?`<button class="round-del" onclick="document.getElementById('rd-${i}').remove()">✕ 삭제</button>`:''}
+    </div>
+  </div>
+  <textarea class="form-input" id="rd-content-${i}" rows="3" placeholder="${roundCount}차 미팅 내용...">${content}</textarea>`;
+  document.getElementById('rounds-container').appendChild(el);
+}
+
+async function saveLog() {
+  const cId = document.getElementById('f-client').value;
+  const client = clientsList.find(c=>c.id===cId);
+  const vDate = document.getElementById('f-date').value;
+  if (!cId||!vDate) { Utils.toast('거래처와 방문일자는 필수입니다.'); return; }
+  const rounds=[];
+  for(let i=0;i<roundCount;i++){
+    if(!document.getElementById(`rd-${i}`)) continue;
+    const c=document.getElementById(`rd-content-${i}`);
+    const d=document.getElementById(`rd-date-${i}`);
+    if(c&&c.value.trim()) rounds.push({date:d?.value||'',content:c.value.trim()});
+  }
+  const payload={client_id:cId,client_name:client?.name||'',rep_name:document.getElementById('f-rep').value,
+    visit_date:vDate,next_date:document.getElementById('f-next').value||null,
+    status:document.getElementById('f-status').value,biz_type:document.getElementById('f-biz').value,
+    feedback:document.getElementById('f-feedback').value};
+  const btn=document.getElementById('log-save-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  try {
+    if(editingLogId) {
+      await API.updateLog(editingLogId,payload,rounds);
+      const fresh=await API.getLog(editingLogId);
+      const idx=allLogs.findIndex(l=>l.id===editingLogId);
+      if(idx>=0) allLogs[idx]=fresh;
+      Utils.toast('방문일지가 수정되었습니다.');
+    } else {
+      const created=await API.createLog(payload,rounds);
+      const fresh=await API.getLog(created.id);
+      allLogs.unshift(fresh);
+      Utils.toast('방문일지가 저장되었습니다.');
+    }
+    Utils.closeModal('modal-log'); applyFilters();
+    document.getElementById('badge-logs').textContent=allLogs.length;
+  } catch(e) { Utils.toast('저장 실패: '+e.message); }
+  finally { btn.disabled=false; btn.textContent=editingLogId?'수정 저장':'저장하기'; }
+}
+
+function exportCSV() {
+  const headers=['방문일','담당자','거래처','상태','사업구분','미팅횟수','추후일정','피드백'];
+  const rows=filteredLogs.map(l=>[l.visit_date,l.rep_name,l.client_name,l.status,l.biz_type||'',(l.meeting_rounds||[]).length,l.next_date||'',l.feedback||'']);
+  const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,%EF%BB%BF'+encodeURIComponent(csv);
+  a.download=`방문일지_${Utils.today()}.csv`; a.click();
+}
+
+init();
+</script>
+</body>
+</html>

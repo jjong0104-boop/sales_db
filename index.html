@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>통신본부 방문일지 — 로그인</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
+    .login-wrap{width:100%;max-width:360px}
+    .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;justify-content:center}
+    .logo-mark{width:38px;height:38px;border-radius:11px;background:var(--green);display:flex;align-items:center;justify-content:center}
+    .logo-mark svg{width:20px;height:20px;fill:#fff}
+    .logo-txt{font-size:16px;font-weight:600;color:var(--text)}
+    .logo-sub{font-size:12px;color:var(--text3)}
+    .login-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--rl);padding:28px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+    .login-card h1{font-size:18px;font-weight:600;margin-bottom:4px}
+    .login-card p{font-size:13px;color:var(--text2);margin-bottom:22px}
+    .login-err{background:var(--coral-lt);color:var(--coral);font-size:12px;padding:8px 12px;border-radius:var(--r);margin-bottom:12px;display:none}
+    .login-err.show{display:block}
+    .btn-login{width:100%;justify-content:center;height:40px;font-size:14px;margin-top:6px}
+    .login-footer{margin-top:18px;text-align:center;font-size:12px;color:var(--text3)}
+  </style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+    </div>
+    <div>
+      <div class="logo-txt">통신본부 방문일지</div>
+      <div class="logo-sub">영업 방문 기록 관리 시스템</div>
+    </div>
+  </div>
+  <div class="login-card">
+    <h1>로그인</h1>
+    <p>담당자 계정으로 접속하세요</p>
+    <div class="login-err" id="login-err"></div>
+    <div class="form-group">
+      <label class="form-label">담당자 선택</label>
+      <select class="form-input" id="login-name">
+        <option value="">선택하세요</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">비밀번호</label>
+      <input type="password" class="form-input" id="login-pw" placeholder="비밀번호 입력" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-login" id="login-btn" onclick="handleLogin()">로그인</button>
+  </div>
+  <div class="login-footer">ⓒ 통신본부 영업팀</div>
+</div>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script src="js/utils.js"></script>
+<script>
+if (Auth.init()) window.location.href = 'pages/dashboard.html';
+
+async function loadUsers() {
+  try {
+    const users = await API.getUsers();
+    const sel = document.getElementById('login-name');
+    users.forEach(u => {
+      const o = document.createElement('option');
+      o.value = u.name;
+      o.textContent = `${u.name}${u.team ? ' ('+u.team+')' : ''}`;
+      sel.appendChild(o);
+    });
+  } catch(e) {
+    // Supabase 미연결 시 샘플
+    [['이원태','무선2팀'],['권현우','기업유선팀'],['나경덕','무선2팀'],['최용준','기업유선팀'],['팀장','관리자']].forEach(([n,t]) => {
+      const o = document.createElement('option');
+      o.value = n; o.textContent = `${n} (${t})`; 
+      document.getElementById('login-name').appendChild(o);
+    });
+  }
+}
+
+async function handleLogin() {
+  const name = document.getElementById('login-name').value;
+  const pw   = document.getElementById('login-pw').value;
+  const err  = document.getElementById('login-err');
+  const btn  = document.getElementById('login-btn');
+  if (!name) { err.textContent='담당자를 선택해주세요.'; err.classList.add('show'); return; }
+  if (!pw)   { err.textContent='비밀번호를 입력해주세요.'; err.classList.add('show'); return; }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  const res = await Auth.login(name, pw);
+  if (res.success) {
+    window.location.href = 'pages/dashboard.html';
+  } else {
+    err.textContent = res.message; err.classList.add('show');
+    btn.disabled = false; btn.textContent = '로그인';
+  }
+}
+
+document.getElementById('login-pw').addEventListener('keydown', e => { if(e.key==='Enter') handleLogin(); });
+loadUsers();
+</script>
+</body>
+</html>
