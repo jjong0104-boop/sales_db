@@ -66,7 +66,18 @@
       <!-- 테이블 -->
       <div class="table-wrap">
         <div class="tbl-scroll">
-          <table class="tbl">
+          <table class="tbl" style="table-layout:fixed;min-width:860px">
+            <colgroup>
+              <col style="width:180px">
+              <col style="width:120px">
+              <col style="width:130px">
+              <col style="width:100px">
+              <col style="width:90px">
+              <col style="width:100px">
+              <col style="width:70px">
+              <col style="width:auto">
+              <col style="width:90px">
+            </colgroup>
             <thead>
               <tr>
                 <th class="sortable" onclick="sortBy('name')">거래처명<span class="sort-arrow none" id="sa-name"></span></th>
@@ -74,10 +85,10 @@
                 <th>연락처</th>
                 <th class="sortable" onclick="sortBy('type')">유형<span class="sort-arrow none" id="sa-type"></span></th>
                 <th>영업방법</th>
-                <th class="sortable" onclick="sortBy('rep_name')">담당 영업사원<span class="sort-arrow none" id="sa-rep_name"></span></th>
-                <th>방문횟수</th>
+                <th class="sortable" onclick="sortBy('rep_name')">담당사원<span class="sort-arrow none" id="sa-rep_name"></span></th>
+                <th>방문</th>
                 <th>메모</th>
-                <th style="width:80px">상세/수정</th>
+                <th>상세/수정</th>
               </tr>
             </thead>
             <tbody id="clients-tbody">
@@ -232,14 +243,14 @@ function renderClients() {
   tbody.innerHTML=data.map(c=>{
     const logCount=allLogs.filter(l=>l.client_id===c.id).length;
     return `<tr>
-      <td class="td-bold" style="cursor:pointer" onclick="showDetail('${c.id}')">${c.name||'-'}</td>
-      <td class="td-muted">${c.contact||'-'}</td>
-      <td class="td-muted">${c.phone||'-'}</td>
+      <td style="cursor:pointer;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onclick="showDetail('${c.id}')" title="${c.name||''}">${c.name||'-'}</td>
+      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text2)" title="${c.contact||''}">${c.contact||'-'}</td>
+      <td style="font-size:12px;color:var(--text2);white-space:nowrap">${c.phone||'-'}</td>
       <td>${Utils.typeChip(c.type)}</td>
-      <td class="td-muted">${c.method||'-'}</td>
+      <td style="font-size:12px;color:var(--text2);white-space:nowrap">${c.method||'-'}</td>
       <td>${Utils.repChip(c.rep_name)}</td>
-      <td><span class="round-badge">${logCount}건</span></td>
-      <td class="td-muted td-trunc" title="${c.memo||''}">${c.memo||'-'}</td>
+      <td style="text-align:center"><span class="round-badge">${logCount}건</span></td>
+      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text3)" title="${c.memo||''}">${c.memo||'-'}</td>
       <td><div class="row-actions">
         <button class="row-btn row-btn-view" onclick="showDetail('${c.id}')">상세</button>
         <button class="row-btn row-btn-edit" onclick="editClient('${c.id}')">수정</button>
