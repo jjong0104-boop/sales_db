@@ -33,33 +33,65 @@
       <div class="page-header">
         <div class="page-header-left">
           <h1>거래처 관리</h1>
-          <p>거래처 주소록 및 방문 기록</p>
+          <p id="client-hint">거래처 주소록</p>
         </div>
         <div class="page-header-actions">
           <button class="btn btn-primary" onclick="openClientModal()">+ 거래처 등록</button>
         </div>
       </div>
+
       <div class="toolbar">
         <div class="search-box">
           <span class="search-ico"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4.5"/><line x1="9.5" y1="9.5" x2="13" y2="13"/></svg></span>
-          <input type="text" id="client-search" placeholder="거래처명 검색..." oninput="renderClients()">
+          <input type="text" id="client-search" placeholder="거래처명, 담당자 검색..." oninput="renderClients()">
         </div>
         <select class="filter-select" id="type-filter" onchange="renderClients()">
           <option value="">전체 유형</option>
-          <option value="신규고객">신규고객</option><option value="기존고객">기존고객</option>
-          <option value="신규 재취업체">신규 재취업체</option><option value="기존 재취업체">기존 재취업체</option>
+          <option value="신규고객">신규고객</option>
+          <option value="기존고객">기존고객</option>
+          <option value="신규 제휴업체">신규 제휴업체</option>
+          <option value="기존 제휴업체">기존 제휴업체</option>
+          <option value="신규 재취업체">신규 재취업체</option>
+          <option value="기존 재취업체">기존 재취업체</option>
         </select>
         <select class="filter-select" id="rep-filter" onchange="renderClients()">
           <option value="">담당자 전체</option>
-          <option>이원태</option><option>권현우</option><option>나경덕</option><option>최용준</option>
+          <option>권하윤</option><option>권현우</option><option>김용현</option>
+          <option>김지환</option><option>김현광</option><option>나병학</option>
+          <option>박근우</option><option>손민우</option><option>손현진</option>
+          <option>이원태</option><option>정대인</option><option>최용준</option>
         </select>
       </div>
-      <div class="result-hint" id="client-hint"></div>
-      <div class="cards-grid" id="clients-grid"><div class="empty-state"><span class="spinner"></span></div></div>
+
+      <!-- 테이블 -->
+      <div class="table-wrap">
+        <div class="tbl-scroll">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th class="sortable" onclick="sortBy('name')">거래처명<span class="sort-arrow none" id="sa-name"></span></th>
+                <th>담당자(거래처)</th>
+                <th>연락처</th>
+                <th class="sortable" onclick="sortBy('type')">유형<span class="sort-arrow none" id="sa-type"></span></th>
+                <th>영업방법</th>
+                <th class="sortable" onclick="sortBy('rep_name')">담당 영업사원<span class="sort-arrow none" id="sa-rep_name"></span></th>
+                <th>방문횟수</th>
+                <th>메모</th>
+                <th style="width:80px">상세/수정</th>
+              </tr>
+            </thead>
+            <tbody id="clients-tbody">
+              <tr><td colspan="9" class="empty-state"><span class="spinner"></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 모바일 카드 -->
+      <div class="card-list" id="clients-card-list"></div>
     </main>
   </div>
 
-  <!-- 모바일 하단 탭바 -->
   <nav class="bottom-tab">
     <div class="bottom-tab-inner">
       <a href="dashboard.html" class="tab-item">
@@ -80,7 +112,7 @@
 
 <div class="loading-overlay" id="loading-overlay"><div class="spinner" style="width:32px;height:32px;border-width:3px"></div></div>
 
-<!-- ══ 거래처 등록/수정 모달 ══ -->
+<!-- 거래처 등록/수정 모달 -->
 <div class="modal-bg" id="modal-client">
   <div class="modal">
     <div class="modal-header">
@@ -91,11 +123,26 @@
       <div class="form-group"><label class="form-label">거래처명 *</label><input type="text" class="form-input" id="c-name" placeholder="예: 한백초등학교"></div>
       <div class="form-group"><label class="form-label">담당자명</label><input type="text" class="form-input" id="c-contact" placeholder="예: 행정실장"></div>
       <div class="form-group"><label class="form-label">연락처</label><input type="text" class="form-input" id="c-phone" placeholder="010-0000-0000"></div>
-      <div class="form-group"><label class="form-label">고객 유형</label><select class="form-input" id="c-type"><option>신규고객</option><option>기존고객</option><option>신규 재취업체</option><option>기존 재취업체</option></select></div>
-      <div class="form-group"><label class="form-label">영업 방법</label><select class="form-input" id="c-method"><option>전화제안</option><option>고객사방문</option><option>메일</option><option>소개</option></select></div>
-      <div class="form-group"><label class="form-label">담당 영업사원</label><select class="form-input" id="c-rep"><option>이원태</option><option>권현우</option><option>나경덕</option><option>최용준</option></select></div>
-      <div class="form-group full"><label class="form-label">주소</label><input type="text" class="form-input" id="c-address" placeholder="거래처 주소"></div>
-      <div class="form-group full"><label class="form-label">메모</label><textarea class="form-input" id="c-memo" placeholder="업종, 특이사항 등"></textarea></div>
+      <div class="form-group"><label class="form-label">고객 유형</label>
+        <select class="form-input" id="c-type">
+          <option>신규고객</option><option>기존고객</option>
+          <option>신규 제휴업체</option><option>기존 제휴업체</option>
+          <option>신규 재취업체</option><option>기존 재취업체</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">영업 방법</label>
+        <select class="form-input" id="c-method"><option>전화제안</option><option>고객사방문</option><option>메일</option><option>온라인문의</option><option>소개</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">담당 영업사원</label>
+        <select class="form-input" id="c-rep">
+          <option>권하윤</option><option>권현우</option><option>김용현</option>
+          <option>김지환</option><option>김현광</option><option>나병학</option>
+          <option>박근우</option><option>손민우</option><option>손현진</option>
+          <option>이원태</option><option>정대인</option><option>최용준</option>
+        </select>
+      </div>
+      <div class="form-group full"><label class="form-label">주소</label><input type="text" class="form-input" id="c-address"></div>
+      <div class="form-group full"><label class="form-label">메모</label><textarea class="form-input" id="c-memo"></textarea></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="Utils.closeModal('modal-client')">취소</button>
@@ -104,12 +151,12 @@
   </div>
 </div>
 
-<!-- ══ 거래처 상세 모달 ══ -->
-<div class="modal-bg" id="modal-client-detail">
+<!-- 거래처 상세 모달 -->
+<div class="modal-bg" id="modal-detail">
   <div class="modal modal-lg">
     <div class="modal-header">
       <div class="modal-title" id="cd-title">거래처 상세</div>
-      <button class="modal-close" onclick="Utils.closeModal('modal-client-detail')">✕</button>
+      <button class="modal-close" onclick="Utils.closeModal('modal-detail')">✕</button>
     </div>
     <div id="cd-body"></div>
   </div>
@@ -128,6 +175,7 @@ Layout.renderTopbar();
 Layout.activateNav('clients');
 
 let allClients=[], allLogs=[], editingClientId=null;
+let sortKey='name', sortAsc=true;
 
 async function init() {
   try {
@@ -142,40 +190,75 @@ async function init() {
     document.getElementById('badge-clients').textContent=clients.length;
     renderClients();
   } catch(e) {
-    document.getElementById('clients-grid').innerHTML=`<div class="empty-state" style="grid-column:1/-1">⚠️ 데이터를 불러올 수 없습니다.</div>`;
+    document.getElementById('clients-tbody').innerHTML=`<tr><td colspan="9" class="empty-state">⚠️ 데이터를 불러올 수 없습니다.</td></tr>`;
   }
+}
+
+function sortBy(key) {
+  if(sortKey===key) sortAsc=!sortAsc; else{sortKey=key;sortAsc=true;}
+  document.querySelectorAll('.sort-arrow').forEach(el=>el.className='sort-arrow none');
+  const sa=document.getElementById('sa-'+key);
+  if(sa) sa.className='sort-arrow '+(sortAsc?'asc':'desc');
+  renderClients();
 }
 
 function renderClients() {
   const search=(document.getElementById('client-search').value||'').toLowerCase();
   const type=document.getElementById('type-filter').value;
   const rep=document.getElementById('rep-filter').value;
+
   let data=allClients.filter(c=>{
     if(type&&c.type!==type)return false;
     if(rep&&c.rep_name!==rep)return false;
-    if(search&&!c.name.toLowerCase().includes(search))return false;
+    if(search&&!(c.name||'').toLowerCase().includes(search)&&!(c.contact||'').toLowerCase().includes(search))return false;
     return true;
   });
+
+  data.sort((a,b)=>{
+    const av=a[sortKey]||'', bv=b[sortKey]||'';
+    return sortAsc?av.localeCompare(bv):bv.localeCompare(av);
+  });
+
   document.getElementById('client-hint').textContent=`${data.length}개 거래처`;
-  if(!data.length){document.getElementById('clients-grid').innerHTML=`<div class="empty-state" style="grid-column:1/-1">등록된 거래처가 없습니다</div>`;return;}
-  document.getElementById('clients-grid').innerHTML=data.map(c=>{
-    const lc=allLogs.filter(l=>l.client_id===c.id).length;
-    return `<div class="client-card" onclick="showClientDetail('${c.id}')">
-      <div class="cc-top">
-        <div class="cc-av">${c.name.slice(0,2)}</div>
-        <div style="flex:1;min-width:0">
-          <div class="cc-name">${c.name}</div>
-          <div class="cc-sub">${c.contact||'-'} · ${c.phone||'-'}</div>
-        </div>
-        ${Utils.typeChip(c.type)}
-      </div>
-      <div class="cc-meta"><span>👤 ${c.rep_name||'-'}</span><span>📋 ${lc}건</span><span>📞 ${c.method||'-'}</span></div>
-      ${c.memo?`<div class="cc-memo">${c.memo}</div>`:''}
+
+  // PC 테이블
+  const tbody=document.getElementById('clients-tbody');
+  if(!data.length){
+    tbody.innerHTML=`<tr><td colspan="9" class="empty-state">조건에 맞는 거래처가 없습니다</td></tr>`;
+    document.getElementById('clients-card-list').innerHTML=`<div class="empty-state">조건에 맞는 거래처가 없습니다</div>`;
+    return;
+  }
+
+  tbody.innerHTML=data.map(c=>{
+    const logCount=allLogs.filter(l=>l.client_id===c.id).length;
+    return `<tr>
+      <td class="td-bold" style="cursor:pointer" onclick="showDetail('${c.id}')">${c.name||'-'}</td>
+      <td class="td-muted">${c.contact||'-'}</td>
+      <td class="td-muted">${c.phone||'-'}</td>
+      <td>${Utils.typeChip(c.type)}</td>
+      <td class="td-muted">${c.method||'-'}</td>
+      <td>${Utils.repChip(c.rep_name)}</td>
+      <td><span class="round-badge">${logCount}건</span></td>
+      <td class="td-muted td-trunc" title="${c.memo||''}">${c.memo||'-'}</td>
+      <td><div class="row-actions">
+        <button class="row-btn row-btn-view" onclick="showDetail('${c.id}')">상세</button>
+        <button class="row-btn row-btn-edit" onclick="editClient('${c.id}')">수정</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  // 모바일 카드
+  document.getElementById('clients-card-list').innerHTML=data.map(c=>{
+    const logCount=allLogs.filter(l=>l.client_id===c.id).length;
+    return `<div class="log-card" onclick="showDetail('${c.id}')">
+      <div class="lc-top"><div class="lc-company">${c.name}</div>${Utils.typeChip(c.type)}</div>
+      <div class="lc-meta">${Utils.repChip(c.rep_name)}<span class="round-badge">${logCount}건</span><span class="chip chip-gray">${c.method||''}</span></div>
+      <div class="lc-preview">${c.contact||''} ${c.phone?'· '+c.phone:''}</div>
     </div>`;
   }).join('');
 }
 
-function showClientDetail(id) {
+function showDetail(id) {
   const c=allClients.find(x=>x.id===id); if(!c) return;
   const logs=allLogs.filter(l=>l.client_id===id).sort((a,b)=>b.visit_date.localeCompare(a.visit_date));
   document.getElementById('cd-title').textContent=c.name;
@@ -191,19 +274,20 @@ function showClientDetail(id) {
     </div>
     <div class="sec-divider">방문 기록 (${logs.length}건)</div>
     ${logs.length?logs.map(l=>`
-      <div style="padding:10px 0;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer" onclick="Utils.closeModal('modal-client-detail')">
+      <div style="padding:10px 0;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         ${Utils.statusChip(l.status)}
         <span style="font-size:12px;color:var(--text3)">${Utils.fmtDate(l.visit_date)}</span>
         <span class="round-badge">${(l.meeting_rounds||[]).length}차</span>
         ${l.feedback?'<span class="feedback-dot"></span>':''}
-        <span style="font-size:12px;color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.meeting_rounds?.[0]?.content?.split('\n')[0]?.slice(0,60)||''}</span>
-      </div>`).join('')
-      :`<div class="empty-state" style="padding:20px 0">방문 기록이 없습니다</div>`}
+        <span style="font-size:12px;color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          ${l.meeting_rounds?.[0]?.content?.split('\n')[0]?.slice(0,60)||''}
+        </span>
+      </div>`).join(''):`<div class="empty-state" style="padding:16px 0">방문 기록이 없습니다</div>`}
     <div style="margin-top:14px;display:flex;gap:8px">
       <button class="btn btn-outline btn-sm" onclick="editClient('${c.id}')">✏️ 정보 수정</button>
-      <button class="btn btn-primary btn-sm" onclick="Utils.closeModal('modal-client-detail');window.location.href='dashboard.html'">방문일지 작성</button>
+      <button class="btn btn-primary btn-sm" onclick="Utils.closeModal('modal-detail');window.location.href='dashboard.html'">방문일지 작성</button>
     </div>`;
-  Utils.openModal('modal-client-detail');
+  Utils.openModal('modal-detail');
 }
 
 function openClientModal() {
@@ -220,15 +304,15 @@ function editClient(id) {
   editingClientId=id;
   document.getElementById('client-modal-title').textContent='거래처 수정';
   document.getElementById('client-save-btn').textContent='수정 저장';
-  document.getElementById('c-name').value=c.name;
+  document.getElementById('c-name').value=c.name||'';
   document.getElementById('c-contact').value=c.contact||'';
   document.getElementById('c-phone').value=c.phone||'';
-  document.getElementById('c-type').value=c.type;
-  document.getElementById('c-method').value=c.method;
-  document.getElementById('c-rep').value=c.rep_name;
+  document.getElementById('c-type').value=c.type||'신규고객';
+  document.getElementById('c-method').value=c.method||'전화제안';
+  document.getElementById('c-rep').value=c.rep_name||'';
   document.getElementById('c-address').value=c.address||'';
   document.getElementById('c-memo').value=c.memo||'';
-  Utils.closeModal('modal-client-detail');
+  Utils.closeModal('modal-detail');
   Utils.openModal('modal-client');
 }
 
